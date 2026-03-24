@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rozgar — Daily Work, Local Trust</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .hero-stats {
+      display: flex; gap: 20px; justify-content: center;
+      margin-top: 36px; flex-wrap: wrap;
+    }
+    .stat {
+      text-align: center;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 14px 20px;
+      min-width: 90px;
+    }
+    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--saffron); }
+    .stat-label { font-size: 0.78rem; color: rgba(255,255,255,0.6); font-weight: 600; margin-top: 2px; }
+    .trust-badges {
+      display: flex; gap: 8px; justify-content: center;
+      flex-wrap: wrap; margin-top: 16px;
+    }
+    .trust-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 6px 14px;
+      font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.75);
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="logo">Roz<span>gar</span></a>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="hi">हिं</button>
+    <button class="lang-btn" data-lang="mr">म</button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-pattern"></div>
+  <div class="hero-content">
+    <div class="hero-icon">🛠️</div>
+    <h1><span class="accent">Roz</span>gar</h1>
+    <p class="tagline" data-i18n="tagline">Daily Work. Local Trust.</p>
+
+    <div class="trust-badges">
+      <div class="trust-badge">✅ Aadhaar Verified</div>
+      <div class="trust-badge">⭐ Rated Workers</div>
+      <div class="trust-badge">📍 Hyperlocal</div>
+    </div>
+
+    <div class="hero-btns" style="margin-top:36px;">
+      <a href="login.html?role=worker" class="btn btn-primary" style="font-size:1.2rem;">
+        🔨 <span data-i18n="iAmWorker">I Am a Worker</span>
+      </a>
+      <a href="login.html?role=customer" class="btn btn-secondary" style="font-size:1.2rem;">
+        🏠 <span data-i18n="iAmCustomer">I Need a Worker</span>
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">5km</div>
+        <div class="stat-label">Radius</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">6+</div>
+        <div class="stat-label">Skills</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0₹</div>
+        <div class="stat-label">Commission</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="translations.js"></script>
+<script src="app.js"></script>
+<script>
+  // If already logged in, redirect
+  const user = getUser();
+  if (user) {
+    window.location.href = user.role === 'worker' ? 'worker.html' : 'customer.html';
+  }
+</script>
+</body>
+</html>

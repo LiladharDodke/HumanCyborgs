@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rozgar — Login</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .login-wrap {
+      min-height: calc(100vh - 58px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px 16px;
+    }
+    .login-box {
+      background: var(--white);
+      border-radius: 24px;
+      padding: 32px 24px;
+      width: 100%; max-width: 420px;
+      box-shadow: var(--card-shadow);
+      border: 1.5px solid var(--border);
+    }
+    .login-icon {
+      width: 64px; height: 64px;
+      background: var(--saffron-pale);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+    .login-role-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--saffron-pale);
+      color: var(--saffron);
+      padding: 6px 14px; border-radius: 20px;
+      font-weight: 700; font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-indicator {
+      display: flex; gap: 6px; margin-bottom: 24px;
+    }
+    .step-dot {
+      height: 4px; flex: 1; border-radius: 2px;
+      background: var(--border); transition: background 0.3s;
+    }
+    .step-dot.done { background: var(--saffron); }
+    .otp-input {
+      letter-spacing: 8px;
+      font-size: 1.6rem !important;
+      font-weight: 700 !important;
+      text-align: center;
+    }
+    .verified-chip {
+      display: none; align-items: center; gap: 6px;
+      background: var(--green-pale); color: var(--green);
+      border-radius: 8px; padding: 8px 14px;
+      font-weight: 700; font-size: 0.9rem; margin-top: 8px;
+    }
+    .verified-chip.show { display: flex; }
+    .hint { font-size: 0.82rem; color: var(--warm-gray); margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="logo">Roz<span>gar</span></a>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="hi">हिं</button>
+    <button class="lang-btn" data-lang="mr">म</button>
+  </div>
+</nav>
+
+<div class="login-wrap">
+  <div class="login-box">
+
+    <div class="login-icon" id="loginIcon">👤</div>
+    <div class="login-role-badge" id="roleBadge">🔨 Worker Login</div>
+
+    <div class="step-indicator">
+      <div class="step-dot done" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+    </div>
+
+    <!-- STEP 1: Aadhaar -->
+    <div class="step active" id="step1">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:6px;" data-i18n="aadhaar">Aadhaar Number</h2>
+      <p class="hint" style="margin-bottom:18px;">Enter your 12-digit Aadhaar for identity verification</p>
+      <div class="form-group">
+        <label class="form-label" data-i18n="aadhaar">Aadhaar Number</label>
+        <input class="form-input" type="number" id="aadhaarInput" placeholder="XXXX XXXX XXXX" maxlength="12"/>
+        <div class="verified-chip" id="aadhaarVerified">✅ <span data-i18n="aadhaarVerified">Aadhaar Verified</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="verifyAadhaar()" id="btnVerifyAadhaar">
+        🔒 Verify Aadhaar
+      </button>
+      <div id="msg1"></div>
+    </div>
+
+    <!-- STEP 2: Phone + OTP -->
+    <div class="step" id="step2">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:6px;" data-i18n="phone">Phone Number</h2>
+      <p class="hint" style="margin-bottom:18px;">We'll send a one-time password to verify your number</p>
+      <div class="form-group">
+        <label class="form-label" data-i18n="phone">Phone Number</label>
+        <div style="display:flex;gap:8px;">
+          <span style="display:flex;align-items:center;font-weight:700;color:var(--navy-mid);padding:0 4px;">+91</span>
+          <input class="form-input" type="tel" id="phoneInput" placeholder="98765 43210" maxlength="10" style="flex:1;"/>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="sendOtp()" id="btnSendOtp">
+        📱 <span data-i18n="sendOtp">Send OTP</span>
+      </button>
+      <div id="msg2"></div>
+    </div>
+
+    <!-- STEP 3: Verify OTP -->
+    <div class="step" id="step3">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:6px;" data-i18n="otp">Enter OTP</h2>
+      <p class="hint" style="margin-bottom:18px;">6-digit OTP sent to your phone (check console for demo)</p>
+      <div class="form-group">
+        <label class="form-label" data-i18n="otp">OTP</label>
+        <input class="form-input otp-input" type="number" id="otpInput" placeholder="------" maxlength="6"/>
+      </div>
+      <button class="btn btn-green" onclick="verifyOtp()" id="btnVerifyOtp">
+        ✅ <span data-i18n="verifyOtp">Verify OTP</span>
+      </button>
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="goStep(2)">
+        ← Resend OTP
+      </button>
+      <div id="msg3"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="translations.js"></script>
+<script src="app.js"></script>
+<script>
+  let userRole = 'worker';
+  let currentStep = 1;
+  let aadhaarVerifiedFlag = false;
+
+  // Read role from URL
+  const params = new URLSearchParams(window.location.search);
+  userRole = params.get('role') || 'worker';
+
+  document.getElementById('loginIcon').textContent = userRole === 'worker' ? '🔨' : '🏠';
+  document.getElementById('roleBadge').innerHTML = userRole === 'worker'
+    ? '🔨 Worker Login' : '🏠 Customer Login';
+
+  function goStep(n) {
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.toggle('active', i + 1 === n);
+    });
+    for (let i = 1; i <= 3; i++) {
+      document.getElementById('dot' + i).classList.toggle('done', i <= n);
+    }
+    currentStep = n;
+  }
+
+  async function verifyAadhaar() {
+    const val = document.getElementById('aadhaarInput').value.trim();
+    const msgEl = document.getElementById('msg1');
+    msgEl.innerHTML = '';
+    if (!val) { showMsg(msgEl, t('fillAllFields'), 'error'); return; }
+
+    const btn = document.getElementById('btnVerifyAadhaar');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await api('/verify-aadhaar', 'POST', { aadhaar: val });
+      if (res.success) {
+        aadhaarVerifiedFlag = true;
+        document.getElementById('aadhaarVerified').classList.add('show');
+        showMsg(msgEl, t('aadhaarVerified'), 'success');
+        setTimeout(() => goStep(2), 1200);
+      } else {
+        showMsg(msgEl, t('aadhaarInvalid'), 'error');
+      }
+    } catch {
+      showMsg(msgEl, 'Server error. Is backend running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔒 Verify Aadhaar';
+    }
+  }
+
+  async function sendOtp() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    const msgEl = document.getElementById('msg2');
+    msgEl.innerHTML = '';
+    if (!phone || phone.length !== 10) { showMsg(msgEl, t('enterPhone'), 'error'); return; }
+
+    const btn = document.getElementById('btnSendOtp');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await api('/send-otp', 'POST', { phone: '91' + phone });
+      if (res.success) {
+        showMsg(msgEl, t('otpSent'), 'info');
+        setTimeout(() => goStep(3), 1000);
+      }
+    } catch {
+      showMsg(msgEl, 'Server error. Is backend running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `📱 <span data-i18n="sendOtp">${t('sendOtp')}</span>`;
+    }
+  }
+
+  async function verifyOtp() {
+    const phone = '91' + document.getElementById('phoneInput').value.trim();
+    const otp = document.getElementById('otpInput').value.trim();
+    const msgEl = document.getElementById('msg3');
+    msgEl.innerHTML = '';
+    if (!otp) { showMsg(msgEl, t('otp'), 'error'); return; }
+
+    const btn = document.getElementById('btnVerifyOtp');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await api('/verify-otp', 'POST', { phone, otp });
+      if (res.success) {
+        showMsg(msgEl, t('otpVerified'), 'success');
+        setUser({ phone, role: userRole, aadhaarVerified: aadhaarVerifiedFlag });
+        setTimeout(() => {
+          window.location.href = userRole === 'worker' ? 'worker.html' : 'customer.html';
+        }, 1000);
+      } else {
+        showMsg(msgEl, t('otpInvalid'), 'error');
+      }
+    } catch {
+      showMsg(msgEl, 'Server error. Is backend running?', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `✅ <span data-i18n="verifyOtp">${t('verifyOtp')}</span>`;
+    }
+  }
+</script>
+</body>
+</html>

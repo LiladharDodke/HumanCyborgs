@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rozgar — Find Workers</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="logo">Roz<span>gar</span></a>
+  <div class="topbar-right">
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="hi">हिं</button>
+      <button class="lang-btn" data-lang="mr">म</button>
+    </div>
+    <button class="btn-logout" onclick="logout()" data-i18n="logout">Logout</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('find')" id="tab-find" data-i18n="nearbyWorkers">Find Workers</button>
+    <button class="tab-btn" onclick="showTab('post')" id="tab-post" data-i18n="postJob">Post Job</button>
+    <button class="tab-btn" onclick="showTab('myjobs')" id="tab-myjobs">My Jobs</button>
+  </div>
+
+  <!-- FIND WORKERS -->
+  <div id="view-find">
+    <div class="card">
+      <div class="card-title"><span class="icon">🔍</span> <span data-i18n="nearbyWorkers">Find Nearby Workers</span></div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="skillRequired">Skill Required</label>
+        <select class="form-select" id="filterSkill" onchange="searchWorkers()">
+          <option value="">All Skills</option>
+          <option value="plumber">🔧 Plumber</option>
+          <option value="electrician">⚡ Electrician</option>
+          <option value="painter">🎨 Painter</option>
+          <option value="mason">🧱 Mason</option>
+          <option value="carpenter">🪚 Carpenter</option>
+          <option value="cleaner">🧹 Cleaner</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="location">Your Location</label>
+        <div class="location-row">
+          <input class="form-input" type="text" id="searchLocation" placeholder="Area name"/>
+          <button class="btn btn-primary btn-sm" onclick="useMyLocation()">📍</button>
+        </div>
+        <input type="hidden" id="searchLat"/>
+        <input type="hidden" id="searchLng"/>
+      </div>
+      <button class="btn btn-green" onclick="searchWorkers()" id="btnSearch">
+        🔍 <span data-i18n="nearbyWorkers">Search Workers</span>
+      </button>
+    </div>
+
+    <div class="section-divider">
+      <h3 id="workerCount" data-i18n="nearbyWorkers">Nearby Workers</h3>
+    </div>
+
+    <div id="workersLoading" class="empty-state" style="display:none;">
+      <div class="icon">⏳</div>
+      <p data-i18n="loading">Loading...</p>
+    </div>
+    <div id="workersList"></div>
+  </div>
+
+  <!-- POST JOB -->
+  <div id="view-post" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> <span data-i18n="postJob">Post a Job</span></div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="jobTitle">Job Title</label>
+        <input class="form-input" type="text" id="jobTitle" placeholder="e.g. Fix kitchen sink pipe"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="skillRequired">Skill Required</label>
+        <select class="form-select" id="jobSkill">
+          <option value="plumber">🔧 Plumber</option>
+          <option value="electrician">⚡ Electrician</option>
+          <option value="painter">🎨 Painter</option>
+          <option value="mason">🧱 Mason</option>
+          <option value="carpenter">🪚 Carpenter</option>
+          <option value="cleaner">🧹 Cleaner</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="budget">Budget (₹)</label>
+        <input class="form-input" type="number" id="jobBudget" placeholder="e.g. 500"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="location">Job Location</label>
+        <div class="location-row">
+          <input class="form-input" type="text" id="jobLocation" placeholder="Area name"/>
+          <button class="btn btn-outline btn-sm" onclick="fillJobLocation()">📍</button>
+        </div>
+        <input type="hidden" id="jobLat"/>
+        <input type="hidden" id="jobLng"/>
+      </div>
+      <button class="btn btn-primary" onclick="postJob()" id="btnPost">
+        🚀 <span data-i18n="postJob">Post Job</span>
+      </button>
+      <div id="postMsg"></div>
+    </div>
+  </div>
+
+  <!-- MY JOBS -->
+  <div id="view-myjobs" style="display:none;">
+    <div id="myJobsList">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <p>No jobs posted yet</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RATE WORKER MODAL -->
+<div class="modal-overlay" id="ratingModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeRatingModal()">×</button>
+    <div class="modal-title">⭐ <span data-i18n="rateWorker">Rate Worker</span></div>
+    <p id="ratingWorkerName" style="color:var(--warm-gray);margin-bottom:12px;"></p>
+    <div class="star-rating" id="starRating">
+      <span class="star" data-val="1">⭐</span>
+      <span class="star" data-val="2">⭐</span>
+      <span class="star" data-val="3">⭐</span>
+      <span class="star" data-val="4">⭐</span>
+      <span class="star" data-val="5">⭐</span>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="submitRating()">
+      ✅ <span data-i18n="submit">Submit Rating</span>
+    </button>
+    <div id="ratingMsg"></div>
+  </div>
+</div>
+
+<script src="translations.js"></script>
+<script src="app.js"></script>
+<script>
+  if (!requireAuth('customer')) throw new Error('Not auth');
+
+  const SKILL_ICONS = { plumber:'🔧', electrician:'⚡', painter:'🎨', mason:'🧱', carpenter:'🪚', cleaner:'🧹' };
+  let selectedRating = 0;
+  let ratingWorkerId = null;
+  let myJobs = [];
+
+  function showTab(tab) {
+    ['find','post','myjobs'].forEach(t => {
+      document.getElementById('view-' + t).style.display = t === tab ? 'block' : 'none';
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
+    if (tab === 'myjobs') renderMyJobs();
+  }
+
+  async function useMyLocation() {
+    try {
+      const coords = await getLocation();
+      document.getElementById('searchLat').value = coords.lat;
+      document.getElementById('searchLng').value = coords.lng;
+      document.getElementById('searchLocation').value = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+      searchWorkers();
+    } catch { alert('Location access denied'); }
+  }
+
+  async function fillJobLocation() {
+    try {
+      const coords = await getLocation();
+      document.getElementById('jobLat').value = coords.lat;
+      document.getElementById('jobLng').value = coords.lng;
+      document.getElementById('jobLocation').value = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+    } catch { alert('Location access denied'); }
+  }
+
+  async function searchWorkers() {
+    const lat = document.getElementById('searchLat').value;
+    const lng = document.getElementById('searchLng').value;
+    const skill = document.getElementById('filterSkill').value;
+    const loadEl = document.getElementById('workersLoading');
+    const listEl = document.getElementById('workersList');
+
+    if (!lat || !lng) {
+      listEl.innerHTML = `<div class="empty-state"><div class="icon">📍</div><p>Please use 📍 to set your location</p></div>`;
+      return;
+    }
+
+    loadEl.style.display = 'flex';
+    listEl.innerHTML = '';
+    const btn = document.getElementById('btnSearch');
+    btn.disabled = true;
+
+    try {
+      let url = `/workers/nearby?lat=${lat}&lng=${lng}`;
+      if (skill) url += `&skill=${skill}`;
+      const res = await api(url);
+      loadEl.style.display = 'none';
+
+      const workers = res.workers || [];
+      document.getElementById('workerCount').textContent = `${workers.length} ${t('nearbyWorkers')}`;
+
+      if (workers.length === 0) {
+        listEl.innerHTML = `<div class="empty-state"><div class="icon">😔</div><p>${t('noWorkersFound')}</p></div>`;
+        return;
+      }
+
+      listEl.innerHTML = workers.map(w => {
+        const skills = w.skills ? w.skills.split(',') : [];
+        return `
+          <div class="worker-card">
+            <div class="worker-card-top">
+              <div class="worker-avatar">👷</div>
+              <div class="worker-info">
+                <div class="worker-name">${w.name}</div>
+                <div class="worker-skills">
+                  ${skills.map(sk => `<span class="skill-tag">${SKILL_ICONS[sk.trim()]||''} ${t(sk.trim())}</span>`).join('')}
+                </div>
+              </div>
+              ${w.available ? '<span class="badge badge-green">●&nbsp;Available</span>' : '<span class="badge badge-gray">Busy</span>'}
+            </div>
+            <div class="worker-meta">
+              <div class="meta-chip"><span class="icon rating-stars">⭐</span>${(w.rating||0).toFixed(1)} (${w.total_reviews||0})</div>
+              <div class="meta-chip"><span class="icon">💰</span>₹${w.price_per_day}<span style="color:var(--warm-gray);font-weight:400;">/day</span></div>
+              <div class="meta-chip"><span class="icon">📍</span>${w.distance ? w.distance.toFixed(1)+' km' : 'Nearby'}</div>
+            </div>
+            <div class="worker-actions">
+              <a href="tel:+${w.phone}" class="btn btn-secondary btn-sm">📞 ${t('call')}</a>
+              <a href="https://wa.me/${w.phone}" target="_blank" class="btn btn-green btn-sm">💬 ${t('whatsapp')}</a>
+              <button class="btn btn-outline btn-sm" onclick="openRatingModal(${w.id}, '${w.name}')">⭐</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      loadEl.style.display = 'none';
+      listEl.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Could not load workers</p></div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function postJob() {
+    const title = document.getElementById('jobTitle').value.trim();
+    const skill = document.getElementById('jobSkill').value;
+    const budget = document.getElementById('jobBudget').value.trim();
+    const lat = document.getElementById('jobLat').value;
+    const lng = document.getElementById('jobLng').value;
+    const msgEl = document.getElementById('postMsg');
+    msgEl.innerHTML = '';
+
+    if (!title || !budget) { showMsg(msgEl, t('fillAllFields'), 'error'); return; }
+    if (!lat || !lng) { showMsg(msgEl, 'Please set job location (📍)', 'error'); return; }
+
+    const btn = document.getElementById('btnPost');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await api('/jobs', 'POST', {
+        title, skill, budget: parseInt(budget),
+        lat: parseFloat(lat), lng: parseFloat(lng)
+      });
+      if (res.success) {
+        const job = { title, skill, budget, lat, lng, id: res.id, status: 'open', time: new Date().toISOString() };
+        myJobs.unshift(job);
+        localStorage.setItem('rozgar_myjobs', JSON.stringify(myJobs));
+        showMsg(msgEl, `✅ ${t('jobPosted')}`, 'success');
+        // Clear form
+        ['jobTitle','jobBudget','jobLocation','jobLat','jobLng'].forEach(id => document.getElementById(id).value = '');
+        setTimeout(() => { showTab('myjobs'); }, 1200);
+      }
+    } catch {
+      showMsg(msgEl, 'Error posting job', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `🚀 <span>${t('postJob')}</span>`;
+    }
+  }
+
+  function renderMyJobs() {
+    const listEl = document.getElementById('myJobsList');
+    if (myJobs.length === 0) {
+      listEl.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No jobs posted yet</p></div>`;
+      return;
+    }
+    listEl.innerHTML = myJobs.map(job => `
+      <div class="job-card">
+        <div class="job-title">📌 ${job.title}</div>
+        <div class="job-meta">
+          <span class="meta-chip">🔧 ${t(job.skill)||job.skill}</span>
+          <span class="meta-chip">💰 ₹${job.budget}</span>
+          <span class="badge badge-green" style="margin-left:auto;">${job.status||'open'}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Rating
+  function openRatingModal(workerId, workerName) {
+    ratingWorkerId = workerId;
+    selectedRating = 0;
+    updateStars();
+    document.getElementById('ratingWorkerName').textContent = workerName;
+    document.getElementById('ratingModal').classList.add('open');
+  }
+  function closeRatingModal() { document.getElementById('ratingModal').classList.remove('open'); }
+  function updateStars() {
+    document.querySelectorAll('#starRating .star').forEach((s,i) => {
+      s.classList.toggle('active', i < selectedRating);
+    });
+  }
+  document.querySelectorAll('#starRating .star').forEach(s => {
+    s.addEventListener('click', () => {
+      selectedRating = parseInt(s.dataset.val);
+      updateStars();
+    });
+  });
+  async function submitRating() {
+    if (!selectedRating) { showMsg(document.getElementById('ratingMsg'), 'Please select a rating', 'error'); return; }
+    try {
+      const res = await api('/rate-worker', 'POST', { worker_id: ratingWorkerId, rating: selectedRating });
+      if (res.success) {
+        showMsg(document.getElementById('ratingMsg'), '⭐ Rating submitted!', 'success');
+        setTimeout(() => { closeRatingModal(); searchWorkers(); }, 1500);
+      }
+    } catch { showMsg(document.getElementById('ratingMsg'), 'Error submitting rating', 'error'); }
+  }
+
+  // Load saved jobs
+  try { myJobs = JSON.parse(localStorage.getItem('rozgar_myjobs')) || []; } catch { myJobs = []; }
+</script>
+</body>
+</html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rozgar — Worker Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="logo">Roz<span>gar</span></a>
+  <div class="topbar-right">
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="hi">हिं</button>
+      <button class="lang-btn" data-lang="mr">म</button>
+    </div>
+    <button class="btn-logout" onclick="logout()" data-i18n="logout">Logout</button>
+  </div>
+</nav>
+
+<div class="page" id="mainPage">
+  <!-- Profile will be injected here -->
+  <div id="profileArea"></div>
+
+  <!-- TABS -->
+  <div class="tabs" id="tabs" style="display:none;">
+    <button class="tab-btn active" onclick="showTab('dashboard')" id="tab-dashboard">🏠 Dashboard</button>
+    <button class="tab-btn" onclick="showTab('jobs')" id="tab-jobs" data-i18n="nearbyJobs">Nearby Jobs</button>
+    <button class="tab-btn" onclick="showTab('edit')" id="tab-edit" data-i18n="edit">Edit</button>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div id="view-dashboard">
+    <div id="profileStrip"></div>
+    <div id="availabilityToggle"></div>
+  </div>
+
+  <!-- JOBS TAB -->
+  <div id="view-jobs" style="display:none;">
+    <div id="jobsLoading" class="empty-state" style="display:none;">
+      <div class="icon">⏳</div>
+      <p data-i18n="loading">Loading...</p>
+    </div>
+    <div id="jobsList"></div>
+  </div>
+
+  <!-- EDIT TAB -->
+  <div id="view-edit" style="display:none;">
+    <div class="card">
+      <div class="card-title"><span class="icon">✏️</span> <span data-i18n="edit">Edit Profile</span></div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="name">Full Name</label>
+        <input class="form-input" type="text" id="editName"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="mySkills">My Skills</label>
+        <div class="skills-grid" id="editSkillsGrid"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="pricePerDay">Price per Day (₹)</label>
+        <input class="form-input" type="number" id="editPrice" placeholder="e.g. 500"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="location">Location</label>
+        <div class="location-row">
+          <input class="form-input" type="text" id="editLocation" placeholder="Area name (optional)"/>
+          <button class="btn btn-outline btn-sm" onclick="fillLocation('edit')" title="Use My Location">📍</button>
+        </div>
+        <input type="hidden" id="editLat"/>
+        <input type="hidden" id="editLng"/>
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile()" id="btnSave">
+        💾 <span data-i18n="save">Save</span>
+      </button>
+      <div id="editMsg"></div>
+    </div>
+  </div>
+
+  <!-- REGISTER FORM (first-time) -->
+  <div id="view-register">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> <span data-i18n="registerWorker">Register as Worker</span></div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="name">Full Name</label>
+        <input class="form-input" type="text" id="regName" data-i18n-placeholder="name" placeholder="Your full name"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="mySkills">My Skills</label>
+        <div class="skills-grid" id="regSkillsGrid"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="pricePerDay">Price per Day (₹)</label>
+        <input class="form-input" type="number" id="regPrice" placeholder="e.g. 500"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="location">Location</label>
+        <div class="location-row">
+          <input class="form-input" type="text" id="regLocation" placeholder="Area name (optional)"/>
+          <button class="btn btn-outline btn-sm" onclick="fillLocation('reg')" title="Use My Location">📍</button>
+        </div>
+        <input type="hidden" id="regLat"/>
+        <input type="hidden" id="regLng"/>
+      </div>
+      <button class="btn btn-primary" onclick="registerWorker()" id="btnRegister">
+        🚀 <span data-i18n="registerWorker">Register</span>
+      </button>
+      <div id="regMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RATING MODAL -->
+<div class="modal-overlay" id="ratingModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeRatingModal()">×</button>
+    <div class="modal-title" data-i18n="rateWorker">Rate Worker</div>
+    <div class="star-rating" id="starRating">
+      <span class="star" data-val="1">⭐</span>
+      <span class="star" data-val="2">⭐</span>
+      <span class="star" data-val="3">⭐</span>
+      <span class="star" data-val="4">⭐</span>
+      <span class="star" data-val="5">⭐</span>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="submitRating()">
+      ✅ <span data-i18n="submit">Submit</span>
+    </button>
+    <div id="ratingMsg"></div>
+  </div>
+</div>
+
+<script src="translations.js"></script>
+<script src="app.js"></script>
+<script>
+  if (!requireAuth('worker')) throw new Error('Not auth');
+
+  const SKILLS = ['plumber','electrician','painter','mason','carpenter','cleaner'];
+  const SKILL_ICONS = { plumber:'🔧', electrician:'⚡', painter:'🎨', mason:'🧱', carpenter:'🪚', cleaner:'🧹' };
+
+  let workerProfile = null;
+  let workerAvailable = false;
+  let selectedRating = 0;
+  let ratingWorkerId = null;
+  let userCoords = null;
+
+  function skillsGrid(containerId, selected = []) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = SKILLS.map(sk => `
+      <label class="skill-check">
+        <input type="checkbox" name="skill" value="${sk}" ${selected.includes(sk) ? 'checked' : ''}/>
+        <div class="check-box"></div>
+        <span class="skill-label">${SKILL_ICONS[sk]} ${t(sk)}</span>
+      </label>
+    `).join('');
+  }
+
+  function getCheckedSkills(containerId) {
+    return [...document.getElementById(containerId).querySelectorAll('input:checked')].map(c => c.value);
+  }
+
+  async function fillLocation(prefix) {
+    try {
+      const coords = await getLocation();
+      userCoords = coords;
+      document.getElementById(prefix + 'Lat').value = coords.lat;
+      document.getElementById(prefix + 'Lng').value = coords.lng;
+      document.getElementById(prefix + 'Location').value = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+    } catch {
+      alert('Could not get location. Please allow location access.');
+    }
+  }
+
+  async function loadProfile() {
+    const user = getUser();
+    try {
+      const res = await api('/worker/profile?phone=' + encodeURIComponent(user.phone));
+      if (res.worker) {
+        workerProfile = res.worker;
+        workerAvailable = !!res.worker.available;
+        showDashboard();
+      } else {
+        showRegisterForm();
+      }
+    } catch {
+      showRegisterForm();
+    }
+  }
+
+  function showRegisterForm() {
+    document.getElementById('view-register').style.display = 'block';
+    document.getElementById('view-dashboard').style.display = 'none';
+    document.getElementById('view-jobs').style.display = 'none';
+    document.getElementById('view-edit').style.display = 'none';
+    document.getElementById('tabs').style.display = 'none';
+    skillsGrid('regSkillsGrid');
+  }
+
+  function showDashboard() {
+    document.getElementById('view-register').style.display = 'none';
+    document.getElementById('tabs').style.display = 'flex';
+    showTab('dashboard');
+    renderProfileStrip();
+    renderAvailabilityToggle();
+  }
+
+  function showTab(tab) {
+    ['dashboard','jobs','edit'].forEach(t => {
+      document.getElementById('view-' + t).style.display = t === tab ? 'block' : 'none';
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
+    if (tab === 'jobs') loadNearbyJobs();
+    if (tab === 'edit') {
+      skillsGrid('editSkillsGrid', workerProfile.skills ? workerProfile.skills.split(',') : []);
+      document.getElementById('editName').value = workerProfile.name || '';
+      document.getElementById('editPrice').value = workerProfile.price_per_day || '';
+      if (workerProfile.lat) document.getElementById('editLat').value = workerProfile.lat;
+      if (workerProfile.lng) document.getElementById('editLng').value = workerProfile.lng;
+    }
+  }
+
+  function renderProfileStrip() {
+    const p = workerProfile;
+    const skills = p.skills ? p.skills.split(',') : [];
+    document.getElementById('profileStrip').innerHTML = `
+      <div class="profile-strip">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="font-size:2.8rem;">👷</div>
+          <div>
+            <div class="profile-strip-name">${p.name}</div>
+            <div style="color:rgba(255,255,255,0.6);font-size:0.85rem;">${p.phone}</div>
+          </div>
+        </div>
+        <div class="profile-strip-meta">
+          <div class="chip">⭐ ${(p.rating || 0).toFixed(1)} (${p.total_reviews || 0})</div>
+          <div class="chip">₹${p.price_per_day || 0}/day</div>
+          ${p.aadhaar_verified ? '<div class="chip">✅ Verified</div>' : ''}
+        </div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${skills.map(sk => `<span class="skill-tag">${SKILL_ICONS[sk]||''} ${t(sk)}</span>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderAvailabilityToggle() {
+    const avail = workerAvailable;
+    document.getElementById('availabilityToggle').innerHTML = `
+      <div class="toggle-row ${avail ? '' : 'unavailable'}">
+        <div>
+          <div class="toggle-label" data-i18n="availability">${t('availability')}</div>
+          <div style="font-size:0.82rem;color:var(--warm-gray);margin-top:2px;">
+            ${avail ? t('available') : t('notAvailable')}
+          </div>
+        </div>
+        <button class="toggle-switch ${avail ? '' : 'off'}" onclick="toggleAvailability()" id="toggleBtn"></button>
+      </div>`;
+  }
+
+  async function toggleAvailability() {
+    const user = getUser();
+    try {
+      const res = await api('/worker/availability', 'PATCH', {
+        phone: user.phone,
+        available: !workerAvailable
+      });
+      if (res.success) {
+        workerAvailable = !workerAvailable;
+        renderAvailabilityToggle();
+        renderProfileStrip();
+      }
+    } catch { alert('Error toggling availability'); }
+  }
+
+  async function registerWorker() {
+    const user = getUser();
+    const name = document.getElementById('regName').value.trim();
+    const price = document.getElementById('regPrice').value.trim();
+    const lat = document.getElementById('regLat').value;
+    const lng = document.getElementById('regLng').value;
+    const skills = getCheckedSkills('regSkillsGrid');
+    const msgEl = document.getElementById('regMsg');
+    msgEl.innerHTML = '';
+
+    if (!name || !price) { showMsg(msgEl, t('fillAllFields'), 'error'); return; }
+    if (skills.length === 0) { showMsg(msgEl, t('selectSkill'), 'error'); return; }
+    if (!lat || !lng) { showMsg(msgEl, 'Please use "📍 My Location" button', 'error'); return; }
+
+    const btn = document.getElementById('btnRegister');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res = await api('/worker/register', 'POST', {
+        name, phone: user.phone,
+        skills: skills.join(','),
+        price_per_day: parseInt(price),
+        lat: parseFloat(lat), lng: parseFloat(lng),
+        aadhaar_verified: user.aadhaarVerified || false
+      });
+      if (res.success) {
+        showMsg(msgEl, t('registrationSuccess'), 'success');
+        setTimeout(() => loadProfile(), 1200);
+      } else {
+        showMsg(msgEl, res.error || 'Registration failed', 'error');
+      }
+    } catch (e) {
+      showMsg(msgEl, 'Server error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `🚀 <span data-i18n="registerWorker">${t('registerWorker')}</span>`;
+    }
+  }
+
+  async function saveProfile() {
+    const user = getUser();
+    const name = document.getElementById('editName').value.trim();
+    const price = document.getElementById('editPrice').value.trim();
+    const lat = document.getElementById('editLat').value;
+    const lng = document.getElementById('editLng').value;
+    const skills = getCheckedSkills('editSkillsGrid');
+    const msgEl = document.getElementById('editMsg');
+    msgEl.innerHTML = '';
+
+    if (!name || !price) { showMsg(msgEl, t('fillAllFields'), 'error'); return; }
+    if (skills.length === 0) { showMsg(msgEl, t('selectSkill'), 'error'); return; }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const body = { phone: user.phone, name, skills: skills.join(','), price_per_day: parseInt(price) };
+      if (lat) body.lat = parseFloat(lat);
+      if (lng) body.lng = parseFloat(lng);
+      const res = await api('/worker/update', 'PUT', body);
+      if (res.success) {
+        showMsg(msgEl, t('registrationSuccess'), 'success');
+        await loadProfile();
+      } else {
+        showMsg(msgEl, res.error || 'Update failed', 'error');
+      }
+    } catch {
+      showMsg(msgEl, 'Server error', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `💾 <span data-i18n="save">${t('save')}</span>`;
+    }
+  }
+
+  async function loadNearbyJobs() {
+    const loadEl = document.getElementById('jobsLoading');
+    const listEl = document.getElementById('jobsList');
+    loadEl.style.display = 'flex';
+    listEl.innerHTML = '';
+
+    try {
+      const p = workerProfile;
+      if (!p || !p.lat) {
+        listEl.innerHTML = `<div class="empty-state"><div class="icon">📍</div><p>Set your location to see nearby jobs</p></div>`;
+        return;
+      }
+      const res = await api(`/jobs/nearby?lat=${p.lat}&lng=${p.lng}&skill=${encodeURIComponent(p.skills || '')}`);
+      loadEl.style.display = 'none';
+      if (!res.jobs || res.jobs.length === 0) {
+        listEl.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>${t('noJobsFound')}</p></div>`;
+        return;
+      }
+      listEl.innerHTML = res.jobs.map(job => `
+        <div class="job-card">
+          <div class="job-title">📌 ${job.title}</div>
+          <div class="job-meta">
+            <span class="meta-chip"><span class="icon">🔧</span>${t(job.skill) || job.skill}</span>
+            <span class="meta-chip"><span class="icon">💰</span>₹${job.budget}</span>
+            <span class="meta-chip"><span class="icon">📍</span>${job.distance ? job.distance.toFixed(1) + ' km ' + t('distance') : ''}</span>
+          </div>
+          <div style="margin-top:10px;">
+            <span class="badge badge-${job.status==='open'?'green':'gray'}">${job.status}</span>
+          </div>
+        </div>
+      `).join('');
+    } catch {
+      loadEl.style.display = 'none';
+      listEl.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Could not load jobs</p></div>`;
+    }
+  }
+
+  // Rating modal
+  function openRatingModal(workerId) {
+    ratingWorkerId = workerId;
+    selectedRating = 0;
+    updateStars();
+    document.getElementById('ratingModal').classList.add('open');
+  }
+  function closeRatingModal() {
+    document.getElementById('ratingModal').classList.remove('open');
+  }
+  function updateStars() {
+    document.querySelectorAll('#starRating .star').forEach((s, i) => {
+      s.classList.toggle('active', i < selectedRating);
+    });
+  }
+  document.querySelectorAll('#starRating .star').forEach(s => {
+    s.addEventListener('click', () => {
+      selectedRating = parseInt(s.dataset.val);
+      updateStars();
+    });
+  });
+  async function submitRating() {
+    if (!selectedRating) { showMsg(document.getElementById('ratingMsg'), 'Please select a rating', 'error'); return; }
+    try {
+      const res = await api('/rate-worker', 'POST', { worker_id: ratingWorkerId, rating: selectedRating });
+      if (res.success) {
+        showMsg(document.getElementById('ratingMsg'), '⭐ Thank you!', 'success');
+        setTimeout(closeRatingModal, 1500);
+      }
+    } catch { showMsg(document.getElementById('ratingMsg'), 'Error submitting rating', 'error'); }
+  }
+
+  // Init
+  loadProfile();
+</script>
+</body>
+</html>
